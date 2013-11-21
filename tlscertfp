@@ -12,16 +12,18 @@
 # Version: 0.3
 # --------------------------------------------------------------------
 
+BN=$(basename $0)
+
 if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
-    echo $0 -- shows TLS cert and their SHA512/SHA256/SHA1/MD5 fingerprints for HOST:PORT
+    echo $BN -- shows TLS cert and their SHA512/SHA256/SHA1/MD5 fingerprints for HOST:PORT
     echo
     echo Help:
-    echo "$ $0 [-s|--short] [openssl s_client arguments] HOST[:PORT]"
+    echo "$ $BN [-s|--short] [openssl s_client arguments] HOST[:PORT]"
     echo Default: Port 443
     echo
     echo Examples:
-    echo "$ $0 metalab.at"
-    echo "$ $0 -s -starttls xmpp jabber.ccc.de:5222"
+    echo "$ $BN metalab.at"
+    echo "$ $BN -s -starttls xmpp jabber.ccc.de:5222"
     exit 1
 fi
 
