@@ -1,4 +1,20 @@
 #!/bin/bash
+# --------------------------------------------------------------------
+# smallvid.sh
+# -----------
+# Compress videos to acceptable size while leaving resolution etc.
+# untouched, also making them streamable. Requires avconv and
+# qt-faststart
+# 
+# Because I was too lazy to find these over and over again
+#
+# Author: Michael Zeltner <m@niij.org>
+#         4096R/6CAC71020AF5D60D
+# License: Public Domain
+# Date: 21 Nov 2013
+# Version: 0.2
+# --------------------------------------------------------------------
+
 BITRATE="2M"
 if [ -n "$2" ]; then
     BITRATE="$2"
