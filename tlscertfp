@@ -1,0 +1,55 @@
+#!/bin/bash
+# --------------------------------------------------------------------
+# tlscertfp
+# ---------
+# Shows TLS certificate info and gives SHA512, SHA256, SHA1 and MD5
+# fingerprints for the certificate delivered by HOST:PORT
+#
+# Author: Michael Zeltner <m@niij.org>
+#         4096R/6CAC71020AF5D60D
+# License: Public Domain
+# Date: 20 Nov 2013
+# Version: 0.3
+# --------------------------------------------------------------------
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
+    echo $0 -- shows TLS cert and their SHA512/SHA256/SHA1/MD5 fingerprints for HOST:PORT
+    echo
+    echo Help:
+    echo "$ $0 [-s|--short] [openssl s_client arguments] HOST[:PORT]"
+    echo Default: Port 443
+    echo
+    echo Examples:
+    echo "$ $0 metalab.at"
+    echo "$ $0 -s -starttls xmpp jabber.ccc.de:5222"
+    exit 1
+fi
+
+HOST=$(sed -e 's/:.*//'<<<"${@: -1}")
+PORT=$(sed -e 's/.*://'<<<"${@: -1}")
+if [ "$HOST" = "$PORT" ]; then
+    PORT=443
+fi
+SHORT=0
+REST=$(sed -e "s/${@: -1}//"<<<"$@")
+VALID="/dev/stderr"
+if [ "$1" = "-s" ] || [ "$1" = "--short" ]; then
+    SHORT=1
+    REST=$(sed -e "s/-s //;s/--short //"<<<"$REST")
+    VALID="/dev/null"
+fi
+
+CRT=$(echo "quit\n"|openssl s_client -connect $HOST:$PORT -servername $HOST $REST 2> $VALID)
+EC=$?
+if [ $EC -ne 0 ]; then
+    exit $EC
+fi
+TEXT=$(openssl x509 -sha512 -text -noout -fingerprint<<<"$CRT")
+if [ $SHORT -eq 1 ]; then
+    tail -n1<<<"$TEXT"
+else
+    cat <<<"$TEXT"
+fi
+openssl x509 -sha256 -text -noout -fingerprint<<<"$CRT"|tail -n1
+openssl x509 -sha1 -text -noout -fingerprint<<<"$CRT"|tail -n1
+openssl x509 -md5 -text -noout -fingerprint<<<"$CRT"|tail -n1

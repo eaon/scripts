@@ -1,0 +1,45 @@
+#!/bin/bash
+# --------------------------------------------------------------------
+# davls
+# -----
+# Lists matching resources from a given WebDAV folder - requires curl,
+# and xmlstarlet
+#
+# Author: Michael Zeltner <m@niij.org>
+#         4096R/6CAC71020AF5D60D
+# License: Public Domain
+# Date: 20 Nov 2013
+# Version: 0.3
+# --------------------------------------------------------------------
+
+bn=$(basename "$0")
+help() {
+    echo $bn -- lists matching resources from a given WebDAV folder
+    echo
+    echo Help:
+    echo "$ $bn https://domain/folder/ | grep mp3 | xargs -l wget"
+    echo
+}
+
+if [[ "$1" = "-h" || "$1" = "--help" || "$1" = "" ]]; then
+    help
+    exit 0
+fi
+
+URL=$1
+
+if [[ ! "$(echo $URL | grep -o '^http')" = "http" || ! "$(echo $URL | grep ' ')" = "" ]]; then
+    echo "Wrong argument: $URL is not a http(s) url"
+    echo
+    help
+    exit 1
+fi
+
+# I love the following line, I could've reused the URL variable but it's so prettyyyyyyyy
+if [ ! "${1:${#1}-1:1}" = "/" ]; then
+    # Because we're always a folder
+    URL="$1/"
+fi
+
+curl -s -X PROPFIND $URL -H "Depth: 1"|xmlstarlet sel -N d=DAV: -t -m "//d:href" -v "." -n | grep -vx "$URL"
+
