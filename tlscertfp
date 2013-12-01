@@ -24,7 +24,7 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
     echo Examples:
     echo "$ $BN metalab.at"
     echo "$ $BN -s -starttls xmpp jabber.ccc.de:5222"
-    exit 1
+    exit 0
 fi
 
 HOST=$(sed -e 's/:.*//'<<<"${@: -1}")

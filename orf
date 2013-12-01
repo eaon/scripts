@@ -1,0 +1,65 @@
+#!/bin/bash
+# --------------------------------------------------------------------
+# orf
+# ---
+# Lists video files for ORF tvthek URLs. Requires curl.
+#
+# Original: Amir Hassan <amir@viel-zu.org>
+#           https://github.com/Metalab/ScreenInvader/
+# Changes: Michael Zeltner <m@niij.org>
+#          4096R/6CAC71020AF5D60D
+# License: GPL2
+# Date: 30 Nov 2013
+# Version: 0.4
+# --------------------------------------------------------------------
+
+bn=$(basename "$0")
+help() {
+    echo $bn -- lists video files for tvthek URLs
+	echo
+    echo Help:
+    echo "$ $bn http://tvthek.orf.at/... [ QUALITY: hoch | mittel | niedrig ]"
+    echo
+    echo Default quality: hoch
+    echo Note: niedrig files do not seem to be stream enabled.
+    echo
+    echo Examples:
+    echo "$ $bn http://tvthek.orf.at/program/haxx0rs-im-Bild/1337 mittel | vlc -"
+	echo "$ $bn http://tvthek.orf.at/program/haxx0rs-im-Bild/1337 | xargs -l wget"
+    echo
+}
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
+	help
+	exit 0
+fi
+
+if [[ ! "$(echo $1 | grep -o '^http://tvthek\.orf\.at/')" = "http://tvthek.orf.at/" || ! "$(echo $1 | grep ' ')" = "" ]]; then
+    echo "Wrong argument: $1 is not a tvthek url"
+    echo
+    help
+	exit 1
+fi
+
+SUF="mp4"
+
+if [ "$2" = "" ]; then
+    QLY="hoch"
+else
+    QLY="$2"
+fi
+
+if ! grep -q "^hoch$\|^mittel$\|^niedrig$"<<<"$QLY"; then
+    echo "Wrong argument: $QLY is not a quality"
+    echo
+    help
+    exit 1
+fi
+
+if [ "$RES" = "niedrig" ]; then
+	SUF="3gp"
+fi
+
+ORF_URL="$(curl -s $1 | grep -Poh "(?<=\"$QLY\",\"src\":\")http[^\"]*\.$SUF(?=\")")"
+ORF_URL="$(echo $ORF_URL | sed -e 's/\\//g' | tr " " \\n | uniq)"
+tail -n $(expr $(wc -l<<<"$ORF_URL") / 2) <<<"$ORF_URL"
