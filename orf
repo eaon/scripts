@@ -16,7 +16,7 @@
 bn=$(basename "$0")
 help() {
     echo $bn -- lists video files for tvthek URLs
-	echo
+    echo
     echo Help:
     echo "$ $bn http://tvthek.orf.at/... [ QUALITY: hoch | mittel | niedrig ]"
     echo
@@ -25,20 +25,20 @@ help() {
     echo
     echo Examples:
     echo "$ $bn http://tvthek.orf.at/program/haxx0rs-im-Bild/1337 mittel | vlc -"
-	echo "$ $bn http://tvthek.orf.at/program/haxx0rs-im-Bild/1337 | xargs -l wget"
+    echo "$ $bn http://tvthek.orf.at/program/haxx0rs-im-Bild/1337 | xargs -l wget"
     echo
 }
 
 if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
-	help
-	exit 0
+    help
+    exit 0
 fi
 
 if [[ ! "$(echo $1 | grep -o '^http://tvthek\.orf\.at/')" = "http://tvthek.orf.at/" || ! "$(echo $1 | grep ' ')" = "" ]]; then
     echo "Wrong argument: $1 is not a tvthek url"
     echo
     help
-	exit 1
+    exit 1
 fi
 
 SUF="mp4"
@@ -57,7 +57,7 @@ if ! grep -q "^hoch$\|^mittel$\|^niedrig$"<<<"$QLY"; then
 fi
 
 if [ "$RES" = "niedrig" ]; then
-	SUF="3gp"
+    SUF="3gp"
 fi
 
 ORF_URL="$(curl -s $1 | grep -Poh "(?<=\"$QLY\",\"src\":\")http[^\"]*\.$SUF(?=\")")"
