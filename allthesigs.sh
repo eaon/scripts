@@ -11,8 +11,37 @@
 #         4096R/6CAC71020AF5D60D
 # License: Public Domain
 # Date: 2 Feb 2014
-# Version: 0.2
+# Version: 0.2.5
 # --------------------------------------------------------------------
+
+BN=$(basename $0)
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+	echo $BN -- helps with air gapped key signing
+	echo
+	echo This script expects to have a files in the current folder to be named
+	echo like this:
+	echo
+	echo foo-pk.asc
+	echo foo-fp.asc
+	echo bar-pk.asc
+	echo bar-lsign-fp.asc
+	echo
+	echo pk.asc files should be public keys you wish to sign, fp.asc files are
+	echo required to have the format of:
+	echo
+	echo "$ gpg --fingerprint bob@foo.bar | gpg --clearsign"
+	echo
+	echo This script checks for both good signatures as well as well as the
+	echo overlap of clearsigned fingerprints with the ones that were imported.
+	echo It exports public signatures as well as local signatures which you
+	echo 'need to import with "--import-options import-local-sigs"'
+	echo
+	echo Happy Social Graph Leaking!
+	echo
+	exit 0
+fi
+
 
 GPG_TTY=$(tty)
 export GPG_TTY
