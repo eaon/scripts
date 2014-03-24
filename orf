@@ -62,4 +62,9 @@ fi
 
 ORF_URL="$(curl -s $1 | grep -Poh "(?<=\"$QLY\",\"src\":\")http[^\"]*\.$SUF(?=\")")"
 ORF_URL="$(echo $ORF_URL | sed -e 's/\\//g' | tr " " \\n | uniq)"
-tail -n $(expr $(wc -l<<<"$ORF_URL") / 2) <<<"$ORF_URL"
+LINES=$(wc -l<<<"$ORF_URL")
+if [ $LINES -eq 1 ]; then
+    echo $ORF_URL
+    exit 0
+fi
+tail -n $(expr $LINES / 2) <<<"$ORF_URL"

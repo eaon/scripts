@@ -2,7 +2,10 @@
 # --------------------------------------------------------------------
 # GenderHackBot.sh
 # ----------------
-# For scripts that are to be made public, or not
+# A script to mirror hackerspaces.org on hackspaces.org, trying to
+# get rid of the gender-connotation in languages in which "hacker" is
+# a male noun. It transforms every mention of hackerspace to
+# hackspaces.
 #
 # Author: Michael Zeltner <m@niij.org>
 #         4096R/6CAC71020AF5D60D

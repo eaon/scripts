@@ -20,7 +20,7 @@ help() {
     echo "$BN -- Periodically downloads changes of a http(s) resource (with curl)"
     echo
     echo Help:
-    echo "$ $BN [-g|--git] 'https://...' filesuffix|gitfilename seconds"
+    echo "$ $BN [-g|--git] 'https://...' file-suffix|git-filename seconds"
     echo "Default: 300 seconds (5 mins)"
     echo
     echo The git function assumes the current directory is a git repository,
