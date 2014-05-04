@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# --------------------------------------------------------------------
+# pew
+# ---
+# pass wrapper for encrypted filenames using a name-map
+#
+# Author: Michael Zeltner <m@niij.org>
+#         4096R/6CAC71020AF5D60D
+# License: Public Domain
+# Date: 03 May 2014
+# Version: 0.1
+# --------------------------------------------------------------------
+
+PREFIX="$HOME/.password-store"
+
+namemap="$(gpg2 --quiet --batch --decrypt $PREFIX/.name-map.gpg)"
+
+newmap=""
+
+map_name() {
+    echo "$(dd if=/dev/urandom count=1 2>/dev/null | sha256sum | grep -o '[a-f0-9]*')~$1"
+}
+
+from_map() {
+    map=$(grep "~$1$" <<< "$namemap")
+    [ $? -eq 0 ] && while read entry; do
+        delim=$(expr index "$entry" "~")
+    	echo "${entry:0:$delim-1}"
+    done <<<"$map"
+}
+
+make_path() {
+	path=$(tr \\n /<<<"$(echo -e $1)")
+	echo ${path%/}
+}
+
+mapped_path() {
+	# backwards compatibility
+	if [ -e "$PREFIX/$1.gpg" ] || [ -e "$PREFIX/$1" ]; then
+		echo "$1"
+		return
+	fi
+	# reuse mapped paths that exist, create new ones for those that don't
+	while read clearpath; do
+		if [ ! "$path" == "" ]; then
+			path="$path\\n"
+		fi
+		mapped="$(from_map $clearpath)"
+		if [ "$mapped" == "" ]; then
+            kv=$(map_name "$clearpath")
+            newmap+=$(echo -e "$kv/")
+			path=$(echo $path$kv | sed -e "s,~.*,,")
+		elif [ ! "$mapped" = "" ] && [ $(wc -l<<<"$mapped") -eq 1 ]; then
+			newpath="$PREFIX/$(make_path $path$mapped)"
+			if [ -e "$newpath" ] || [ -e "$newpath.gpg"  ] ; then
+				path="$path$mapped"
+			else
+                kv=$(map_name "$clearpath")
+                newmap+=$(echo -e "$kv/")
+	    		path=$(echo $path$kv | sed -e "s,~.*,,")
+			fi
+		elif [ ! "$mapped" = "" ] && [ $(wc -l<<<"$mapped") -gt 1 ]; then
+			while read mapentry; do
+				newpath="$PREFIX/$(make_path $path$mapentry)"
+				if [ -e "$newpath" ] || [ -e "$newpath.gpg" ]; then
+					path="$path$mapentry"
+					break
+				fi
+			done <<<"$mapped"
+		fi
+	done <<<"$(tr / \\n<<<$1)"
+	#path=$(echo -e "$path")
+	echo "$(make_path $path)"
+    [ ! $newmap = "" ] && tr '/' '\n' <<<"${newmap%?}"
+}
+
+passls() {
+    output="$(pass ls)"
+    [ ! "$namemap" = "" ] && while read mapentry; do
+        output=$(sed -e "s~$mapentry~" <<<"$output")
+    done <<< "$namemap"
+
+    echo "$output"
+}
+
+if [ ! "$1" = "" ]; then
+    mapout="$(mapped_path ${@: -1})"
+    mappth=$(head -n 1 <<<"$mapout")
+    mapadd=$(tail -n+2 <<<"$mapout")
+    if [ "$1" = "-c" ]; then
+        pass -c "$mappth"
+        [ $? -eq 0 ] && notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Copied $mappth into clipboard, clearing in 45 seconds." && (
+            sleep 45
+            notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Cleared clipboard."
+        ) & disown
+    elif [ "$1" = "${@: -1}" ]; then
+        pass "$mappth"
+    elif [ "$1" = "edit" ]; then
+        pass edit "$mappth"
+    elif [ "$1" = "ls" ]; then
+        passls
+    elif [ "$1" = "insert" ]; then
+        pass insert "$mappth"
+        [ $? -eq 0 ] && echo -e "$namemap\n$mapadd" | gpg2 --encrypt --batch $(xargs -l -i{} echo -r {} < $PREFIX/.gpg-id | tr '\n' ' ') > $PREFIX/.name-map.gpg
+    fi
+else
+    passls
+fi
+
