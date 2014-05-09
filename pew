@@ -15,6 +15,11 @@ PREFIX="$HOME/.password-store"
 
 namemap="$(gpg2 --quiet --batch --decrypt $PREFIX/.name-map.gpg)"
 
+if [ $? -gt 0 ]; then
+    echo pew only works if you unlock your key
+    exit 1
+fi
+
 newmap=""
 
 map_name() {
@@ -83,25 +88,63 @@ passls() {
     echo "$output"
 }
 
+update_map() {
+    if [ "$1" = "filtered" ]; then
+        namemap="$newnamemap"
+    else
+        namemap="$namemap\n$mapadd"
+    fi
+    echo -e "$namemap" | gpg2 --encrypt --batch $(xargs -l -i{} echo -r {} < $PREFIX/.gpg-id | tr '\n' ' ') > $PREFIX/.name-map.gpg
+}
+
+notify() {
+    notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Copied ${@: -1} into clipboard, clearing in 45 seconds." && (
+        sleep 45
+        notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Cleared clipboard."
+    ) & disown
+}
+
 if [ ! "$1" = "" ]; then
+    name=${@: -1}
     mapout="$(mapped_path ${@: -1})"
     mappth=$(head -n 1 <<<"$mapout")
     mapadd=$(tail -n+2 <<<"$mapout")
     if [ "$1" = "-c" ]; then
         pass -c "$mappth"
-        [ $? -eq 0 ] && notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Copied $mappth into clipboard, clearing in 45 seconds." && (
-            sleep 45
-            notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Cleared clipboard."
-        ) & disown
+        [ $? -eq 0 ] && notify
     elif [ "$1" = "${@: -1}" ]; then
         pass "$mappth"
+    elif [ "$1" = "rm" ]; then
+        pass rm "$mappth"
+        if [ $? -eq 0 ]; then
+            while read key; do
+                newnamemap+="$(grep $key<<<"$namemap")/"
+            done<<<"$(tree -i --noreport $PREFIX/ | tail -n+2 | sed -e 's,.gpg,,')"
+            newnamemap=$(tr '/' '\n'<<<"$newnamemap")
+            update_map filtered
+        fi
+        
+    elif [ "$1" = "show" ]; then
+        pass show "$mappth"
     elif [ "$1" = "edit" ]; then
         pass edit "$mappth"
     elif [ "$1" = "ls" ]; then
         passls
     elif [ "$1" = "insert" ]; then
         pass insert "$mappth"
-        [ $? -eq 0 ] && echo -e "$namemap\n$mapadd" | gpg2 --encrypt --batch $(xargs -l -i{} echo -r {} < $PREFIX/.gpg-id | tr '\n' ' ') > $PREFIX/.name-map.gpg
+        [ $? -eq 0 ] && update_map
+    elif [ "$1" = "generate" ]; then
+        length=${@: -1}
+        name=${@: -2}
+        args=$(egrep -o "\-[-a-z]*"<<<"$@" | tr '\n' ' ')
+        mapout="$(mapped_path $name)"
+        mappth=$(head -n 1 <<<"$mapout")
+        mapadd=$(tail -n+2 <<<"$mapout")
+        pass generate $args "$mappth" $length
+        if [ $? -eq 0 ]; then
+            update_map
+            [ "$(grep -o \\\-c<<<$args)" = "-c" ] && notify
+        fi
     fi
 else
     passls
