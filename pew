@@ -13,25 +13,37 @@
 
 PREFIX="$HOME/.password-store"
 
-namemap="$(gpg2 --quiet --batch --decrypt $PREFIX/.name-map.gpg)"
+namemap=""
+localnamemap=""
+localnamemapfile=""
 
-if [ $? -gt 0 ]; then
-    echo pew only works if you unlock your key
-    exit 1
-fi
+for map in $PREFIX/.name-map-*.gpg; do
+	readmap="$(gpg2 --quiet --batch --decrypt $map)"
+	if [ $? -gt 0 ]; then
+		echo pew only works if you unlock your key
+		exit 1
+	fi
+	if [ $(stat -c "%a" $map) -eq 600 ] && [ "$localnamemapfile" = "" ]; then
+		localnamemapfile="$map"
+		localnamemap="$readmap"
+	fi
+	namemap="$namemap\n$readmap"
+done
+
+namemap=$(echo -e "${namemap:2}")
 
 newmap=""
 
 map_name() {
-    echo "$(dd if=/dev/urandom count=1 2>/dev/null | sha256sum | grep -o '[a-f0-9]*')~$1"
+	echo "$(dd if=/dev/urandom count=1 2>/dev/null | sha256sum | grep -o '[a-f0-9]*')~$1"
 }
 
 from_map() {
-    map=$(grep "~$1$" <<< "$namemap")
-    [ $? -eq 0 ] && while read entry; do
-        delim=$(expr index "$entry" "~")
-    	echo "${entry:0:$delim-1}"
-    done <<<"$map"
+	map=$(grep "~$1$" <<< "$namemap")
+	[ $? -eq 0 ] && while read entry; do
+		delim=$(expr index "$entry" "~")
+		echo "${entry:0:$delim-1}"
+	done <<<"$map"
 }
 
 make_path() {
@@ -52,17 +64,17 @@ mapped_path() {
 		fi
 		mapped="$(from_map $clearpath)"
 		if [ "$mapped" == "" ]; then
-            kv=$(map_name "$clearpath")
-            newmap+=$(echo -e "$kv/")
+			kv=$(map_name "$clearpath")
+			newmap+=$(echo -e "$kv/")
 			path=$(echo $path$kv | sed -e "s,~.*,,")
 		elif [ ! "$mapped" = "" ] && [ $(wc -l<<<"$mapped") -eq 1 ]; then
 			newpath="$PREFIX/$(make_path $path$mapped)"
 			if [ -e "$newpath" ] || [ -e "$newpath.gpg"  ] ; then
 				path="$path$mapped"
 			else
-                kv=$(map_name "$clearpath")
-                newmap+=$(echo -e "$kv/")
-	    		path=$(echo $path$kv | sed -e "s,~.*,,")
+				kv=$(map_name "$clearpath")
+				newmap+=$(echo -e "$kv/")
+				path=$(echo $path$kv | sed -e "s,~.*,,")
 			fi
 		elif [ ! "$mapped" = "" ] && [ $(wc -l<<<"$mapped") -gt 1 ]; then
 			while read mapentry; do
@@ -76,77 +88,85 @@ mapped_path() {
 	done <<<"$(tr / \\n<<<$1)"
 	#path=$(echo -e "$path")
 	echo "$(make_path $path)"
-    [ ! $newmap = "" ] && tr '/' '\n' <<<"${newmap%?}"
+	[ ! $newmap = "" ] && tr '/' '\n' <<<"${newmap%?}"
 }
 
 passls() {
-    output="$(pass ls)"
-    [ ! "$namemap" = "" ] && while read mapentry; do
-        output=$(sed -e "s~$mapentry~" <<<"$output")
-    done <<< "$namemap"
+	output="$(pass ls)"
+	[ ! "$namemap" = "" ] && while read mapentry; do
+		output=$(sed -e "s~$mapentry~" <<<"$output")
+	done <<< "$namemap"
 
-    echo "$output"
+	echo "$output"
 }
 
 update_map() {
-    if [ "$1" = "filtered" ]; then
-        namemap="$newnamemap"
-    else
-        namemap="$namemap\n$mapadd"
-    fi
-    echo -e "$namemap" | gpg2 --encrypt --batch $(xargs -l -i{} echo -r {} < $PREFIX/.gpg-id | tr '\n' ' ') > $PREFIX/.name-map.gpg
+	if [ "$1" = "filtered" ]; then
+		localnamemap="$newnamemap"
+	else
+		localnamemap="$localnamemap\n$mapadd"
+	fi
+	echo -e "$localnamemap" | gpg2 --encrypt --batch $(xargs -l -i{} echo -r {} < $PREFIX/.gpg-id | tr '\n' ' ') > $localnamemapfile
 }
 
 notify() {
-    notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Copied ${@: -1} into clipboard, clearing in 45 seconds." && (
-        sleep 45
-        notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Cleared clipboard."
-    ) & disown
+	notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Copied ${@: -1} into clipboard, clearing in 45 seconds." && (
+		sleep 45
+		notify-send -i seahorse -t 1 -h int:transient:1 "pass" "Cleared clipboard."
+	) & disown
 }
 
 if [ ! "$1" = "" ]; then
-    name=${@: -1}
-    mapout="$(mapped_path ${@: -1})"
-    mappth=$(head -n 1 <<<"$mapout")
-    mapadd=$(tail -n+2 <<<"$mapout")
-    if [ "$1" = "-c" ]; then
-        pass -c "$mappth"
-        [ $? -eq 0 ] && notify
-    elif [ "$1" = "${@: -1}" ]; then
-        pass "$mappth"
-    elif [ "$1" = "rm" ]; then
-        pass rm "$mappth"
-        if [ $? -eq 0 ]; then
-            while read key; do
-                newnamemap+="$(grep $key<<<"$namemap")/"
-            done<<<"$(tree -i --noreport $PREFIX/ | tail -n+2 | sed -e 's,.gpg,,')"
-            newnamemap=$(tr '/' '\n'<<<"$newnamemap")
-            update_map filtered
-        fi
-        
-    elif [ "$1" = "show" ]; then
-        pass show "$mappth"
-    elif [ "$1" = "edit" ]; then
-        pass edit "$mappth"
-    elif [ "$1" = "ls" ]; then
-        passls
-    elif [ "$1" = "insert" ]; then
-        pass insert "$mappth"
-        [ $? -eq 0 ] && update_map
-    elif [ "$1" = "generate" ]; then
-        length=${@: -1}
-        name=${@: -2}
-        args=$(egrep -o " \-[-a-z]*"<<<"$@" | tr '\n' ' ')
-        mapout="$(mapped_path $name)"
-        mappth=$(head -n 1 <<<"$mapout")
-        mapadd=$(tail -n+2 <<<"$mapout")
-        pass generate $args "$mappth" $length
-        if [ $? -eq 0 ]; then
-            update_map
-            [ "$(grep -o \\\-c<<<$args)" = "-c" ] && notify
-        fi
-    fi
+	name=${@: -1}
+	mapout="$(mapped_path ${@: -1})"
+	mappth=$(head -n 1 <<<"$mapout")
+	mapadd=$(tail -n+2 <<<"$mapout")
+	if [ "$1" = "-c" ]; then
+		pass -c "$mappth"
+		[ $? -eq 0 ] && notify
+	elif [ "$1" = "${@: -1}" ]; then
+		pass "$mappth"
+	elif [ "$1" = "rm" ]; then
+		last=$(tr '/' '\n'<<<"$mappth"|tail -n 1)
+		grep -q $last<<<"$localnamemap"
+		if [ $? -eq 1 ]; then
+			echo "This pew instance does not seem to be authoritative for the entry you're trying to remove. Please remove elsewhere and use git pull to update your store."
+			exit 1
+		fi
+		pass rm "$mappth"
+		if [ $? -eq 0 ]; then
+			while read key; do
+				match=$(grep "$key"<<<"$localnamemap")
+				if [ $? -eq 0  ]; then
+					newnamemap+="$match/"
+				fi
+			done<<<"$(tree -i --noreport $PREFIX/ | tail -n+2 | sed -e 's,.gpg,,')"
+			newnamemap=$(tr '/' '\n'<<<"$newnamemap")
+			update_map filtered
+		fi
+	elif [ "$1" = "show" ]; then
+		pass show "$mappth"
+	elif [ "$1" = "edit" ]; then
+		pass edit "$mappth"
+	elif [ "$1" = "ls" ]; then
+		passls
+	elif [ "$1" = "insert" ]; then
+		pass insert "$mappth"
+		[ $? -eq 0 ] && update_map
+	elif [ "$1" = "generate" ]; then
+		length=${@: -1}
+		name=${@: -2}
+		args=$(egrep -o " \-[-a-z]*"<<<"$@" | tr '\n' ' ')
+		mapout="$(mapped_path $name)"
+		mappth=$(head -n 1 <<<"$mapout")
+		mapadd=$(tail -n+2 <<<"$mapout")
+		pass generate $args "$mappth" $length
+		if [ $? -eq 0 ]; then
+			update_map
+			[ "$(grep -o \\\-c<<<$args)" = "-c" ] && notify
+		fi
+	fi
 else
-    passls
+	passls
 fi
 
