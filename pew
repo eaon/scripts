@@ -18,7 +18,7 @@ localnamemap=""
 localnamemapfile=""
 
 for map in $PREFIX/.name-map-*.gpg; do
-	readmap="$(gpg2 --quiet --batch --decrypt $map)"
+	readmap="$(gpg2 $PASSWORD_STORE_GPG_OPTS --quiet --batch --decrypt $map)"
 	if [ $? -gt 0 ]; then
 		echo pew only works if you unlock your key
 		exit 1
@@ -106,7 +106,7 @@ update_map() {
 	else
 		localnamemap="$localnamemap\n$mapadd"
 	fi
-	echo -e "$localnamemap" | gpg2 --encrypt --batch $(xargs -l -i{} echo -r {} < $PREFIX/.gpg-id | tr '\n' ' ') > $localnamemapfile
+	echo -e "$localnamemap" | gpg2 $PASSWORD_STORE_GPG_OPTS --encrypt --batch $(xargs -l -i{} echo -r {} < $PREFIX/.gpg-id | tr '\n' ' ') > $localnamemapfile
 }
 
 notify() {
