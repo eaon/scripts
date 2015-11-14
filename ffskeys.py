@@ -60,6 +60,9 @@ def search(term):
         return no + " " * (8 - len(no))
     results = r.text.strip()
     pubkeys = results.split('pub:')[1:]
+    if len(pubkeys) == 0:
+        print("No keys found")
+        sys.exit(0)
     c = 0
     fprs = []
     for key in pubkeys:
