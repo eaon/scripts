@@ -32,8 +32,12 @@ OUT=$5
 
 COMMAND="openssl ocsp -issuer $ISSUER -CAfile $CAFILE -nonce -url $URL -header Host $HOST -serial \"0x$SERIAL\""
 
-UPDATE=$(($(date --date="$($COMMAND -respin $OUT 2> /dev/null | grep -oP "Next Update:.*" | sed -e 's,.*: ,,')" +%s)-$((60*60*5))))
+if [ -f $OUT ]; then
+    UPDATE=$(($(date --date="$($COMMAND -respin $OUT 2> /dev/null | grep -oP "Next Update:.*" | sed -e 's,.*: ,,')" +%s)-$((60*60*5))))
+else
+    UPDATE=1
+fi
 
-if [ $UPDATE -gt $(date +%s) ]; then
+if [ $UPDATE -lt $(date +%s) ]; then
     $COMMAND -respout $OUT -out /dev/null 2> /dev/null
 fi
