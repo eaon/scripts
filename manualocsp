@@ -1,0 +1,39 @@
+#!/bin/bash
+# --------------------------------------------------------------------
+# manualocsp
+# ----------
+#
+# Author: Michael Zeltner <m@niij.org>
+#         rsa8192/5DE83E90EFFCDDF9
+# License: Public Domain
+# Date: 15 Nov 2015
+# Version: 0.1
+# --------------------------------------------------------------------
+
+BN=$(basename $0)
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
+    echo $BN -- cron helper to download the most recent ocsp response
+    echo
+    echo Help:
+    echo "$ $BN ISSUER CAFILE URL SERIAL FILE"
+    echo
+    echo Examples:
+    echo "$ $BN myca.pem mycabundle.pem http://ocsp.myca.example.org/ 0x42424242424242 mycert-ocspresponse.der"
+    exit 0
+fi
+
+ISSUER=$1
+CAFILE=$2
+URL="$3"
+HOST=$(sed -e 's,.*//\([.a-z]*\)/.*,\1,g'<<<"$3")
+SERIAL=$4
+OUT=$5
+
+COMMAND="openssl ocsp -issuer $ISSUER -CAfile $CAFILE -nonce -url $URL -header Host $HOST -serial \"0x$SERIAL\""
+
+UPDATE=$(($(date --date="$($COMMAND -respin $OUT 2> /dev/null | grep -oP "Next Update:.*" | sed -e 's,.*: ,,')" +%s)-$((60*60*5))))
+
+if [ $UPDATE -gt $(date +%s) ]; then
+    $COMMAND -respout $OUT -out /dev/null 2> /dev/null
+fi
