@@ -30,7 +30,7 @@ HOST=$(sed -e 's,.*//\([.a-z]*\)/.*,\1,g'<<<"$3")
 SERIAL=$4
 OUT=$5
 
-COMMAND="openssl ocsp -issuer $ISSUER -CAfile $CAFILE -nonce -url $URL -header Host $HOST -serial \"0x$SERIAL\""
+COMMAND="openssl ocsp -issuer $ISSUER -CAfile $CAFILE -nonce -url $URL -header Host $HOST -serial $SERIAL"
 
 if [ -f $OUT ]; then
     UPDATE=$(($(date --date="$($COMMAND -respin $OUT 2> /dev/null | grep -oP "Next Update:.*" | sed -e 's,.*: ,,')" +%s)-$((60*60*5))))
