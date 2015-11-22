@@ -16,10 +16,10 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
     echo $BN -- cron helper to download the most recent ocsp response
     echo
     echo Help:
-    echo "$ $BN ISSUER CAFILE URL SERIAL FILE"
+    echo "$ $BN ISSUER CAFILE URL SERIAL FILE [POSTDOWNLOADCOMMAND]"
     echo
     echo Examples:
-    echo "$ $BN myca.pem mycabundle.pem http://ocsp.myca.example.org/ 0x42424242424242 mycert-ocspresponse.der"
+    echo "$ $BN myca.pem mycabundle.pem http://ocsp.myca.example.org/ 0x42424242424242 mycert-ocspresponse.der 'systemctl restart nginx.service'"
     exit 0
 fi
 
@@ -29,15 +29,20 @@ URL="$3"
 HOST=$(sed -e 's,.*//\([.a-z]*\)/.*,\1,g'<<<"$3")
 SERIAL=$4
 OUT=$5
+POST=$6
 
-COMMAND="openssl ocsp -issuer $ISSUER -CAfile $CAFILE -nonce -url $URL -header Host $HOST -serial $SERIAL"
+COMMAND="openssl ocsp -issuer $ISSUER -CAfile $CAFILE"
+REQ="-nonce -url $URL -header Host $HOST -serial $SERIAL"
 
 if [ -f $OUT ]; then
-    UPDATE=$(($(date --date="$($COMMAND -respin $OUT 2> /dev/null | grep -oP "Next Update:.*" | sed -e 's,.*: ,,')" +%s)-$((60*60*5))))
+    UPDATE=$(($(date --date="$($COMMAND -text -respin $OUT 2> /dev/null | grep -oP "Next Update:.*" | sed -e 's,.*: ,,')" +%s)-$((60*60*5))))
 else
     UPDATE=1
 fi
 
 if [ $UPDATE -lt $(date +%s) ]; then
-    $COMMAND -respout $OUT -out /dev/null 2> /dev/null
+    $COMMAND $REQ -respout $OUT -out /dev/null 2> /dev/null
+    if [ "$POST" != "" ]; then
+        exec $POST
+    fi
 fi
