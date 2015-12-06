@@ -53,7 +53,7 @@ if [ $? -eq 0 ]; then
 		echo Failed to get them signed. Moving certs out of the way.
 		FT="failed-$(date +%s)"
 		for f in $FN*; do
-			grep -q failed <<<"$f" && mv $f $f-$FT
+			! grep -q failed <<<"$f" && mv $f $f-$FT
 		done
 		exit 1
 	fi
