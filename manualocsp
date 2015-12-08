@@ -26,7 +26,7 @@ fi
 ISSUER=$1
 CAFILE=$2
 URL="$3"
-HOST=$(sed -e 's,.*//\([.a-z]*\)/.*,\1,g'<<<"$3")
+HOST=$(sed -e 's,.*//\([-.a-zA-Z0-9]*\)/.*,\1,g'<<<"$3")
 SERIAL=$4
 OUT=$5
 POST=$6
