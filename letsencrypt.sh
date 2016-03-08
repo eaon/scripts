@@ -48,7 +48,7 @@ exec 3<<<"$(cat $(find /etc/ -name openssl.cnf 2>/dev/null | head -n1))$(printf 
 openssl req -new -nodes -sha512 -newkey rsa:4096 -keyout $FN.key -subj "/CN=$CN" -out $FN.csr -reqexts SAN -config /proc/$$/fd/3 -out $FN.csr
 
 if [ $? -eq 0 ]; then
-	python $(dirname $(realpath $0))/acme_tiny.py --account-key $USERKEY --csr $FN.csr --acme-dir $3 > $FN.crt
+	python3 $(dirname $(realpath $0))/acme_tiny.py --account-key $USERKEY --csr $FN.csr --acme-dir $3 > $FN.crt
 	if [ $? -ne 0 ]; then
 		echo Failed to get them signed. Moving certs out of the way.
 		FT="failed-$(date +%s)"

@@ -16,10 +16,10 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "" ]; then
     echo $BN -- cron helper to download the most recent ocsp response
     echo
     echo Help:
-    echo "$ $BN ISSUER CAFILE URL SERIAL FILE [POSTDOWNLOADCOMMAND]"
+    echo "$ $BN ISSUER CAFILE URL CERTIFICATE FILE [POSTDOWNLOADCOMMAND]"
     echo
     echo Examples:
-    echo "$ $BN myca.pem mycabundle.pem http://ocsp.myca.example.org/ 0x42424242424242 mycert-ocspresponse.der 'systemctl restart nginx.service'"
+    echo "$ $BN myca.pem mycabundle.pem http://ocsp.myca.example.org/ mycert.crt mycert-ocspresponse.der 'systemctl restart nginx.service'"
     exit 0
 fi
 
@@ -27,9 +27,10 @@ ISSUER=$1
 CAFILE=$2
 URL="$3"
 HOST=$(sed -e 's,.*//\([-.a-zA-Z0-9]*\)/.*,\1,g'<<<"$3")
-SERIAL=$4
+CERTIFICATE=$4
 OUT=$5
 POST=$6
+SERIAL="0x$(openssl x509 -in $4 -serial -noout | egrep -o "[A-Z0-9]*")"
 
 COMMAND="openssl ocsp -issuer $ISSUER -CAfile $CAFILE"
 REQ="-nonce -url $URL -header Host $HOST -serial $SERIAL"
