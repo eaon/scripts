@@ -15,7 +15,7 @@ choice() {
     echo "${@: $4:1}" >> ~/.config/redshift.conf
 }
 
-ARG=$(sed  -e "s,\(EST\|EDT\),1," -e "s,\(CEST\|CET\),2," -e "s,\(PST\|PDT\),3," <<<"$(date +%Z)")
+ARG=$(sed -e "s,\(CEST\|CET\),2," -e "s,\(EST\|EDT\),1," -e "s,\(PST\|PDT\),3," <<<"$(date +%Z)")
  
 if [[ $ARG != [1-3] ]]; then
     notify-send "Redshift" "I don't know where you are! You need to manually change the configuration!"
