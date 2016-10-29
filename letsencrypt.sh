@@ -10,8 +10,8 @@
 # Author: Michael Zeltner <m@niij.org>
 #         rsa8192/5DE83E90EFFCDDF9
 # License: Public Domain
-# Date: 05 Dec 2015
-# Version: 0.1
+# Date: 29 Oct 2016
+# Version: 0.2
 # --------------------------------------------------------------------
 
 BN=$(basename $0)
@@ -31,7 +31,7 @@ DOMAINS="$(tr ':' '\n' <<<$1)"
 SAN="$(sed -e 's!:!,DNS:!g' <<<$1)"
 CN=$(head -n1 <<<"$DOMAINS")
 CF=$(realpath $2)
-FN=$(echo $CF/$CN-$(date +%Y%m%d))
+FN=$(echo $CF/$CN-$(date +%Y%m%d))-$(printf %03d ${RANDOM:0:3})
 if [ "$4" = "" ]; then
 	USERKEY="$HOME/.local/share/letsencrypt-user.key"
 else
