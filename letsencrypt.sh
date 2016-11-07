@@ -5,19 +5,21 @@
 # Create certificate signing requests and sign them to Let's Encrypt
 #
 # I don't like storing the user keys on my server so I use ssh-fs
-# for the challenge.
+# for the challenge. Depends on https://github.com/diafygi/acme-tiny
 #
 # Author: Michael Zeltner <m@niij.org>
 #         rsa8192/5DE83E90EFFCDDF9
 # License: Public Domain
-# Date: 29 Oct 2016
-# Version: 0.2
+# Date: 07 Nov 2016
+# Version: 0.2d
 # --------------------------------------------------------------------
 
 BN=$(basename $0)
 
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
 	echo "$BN -- Create certificate signing requests and sign them to Let's Encrypt"
+	echo
+	echo Depends on https://github.com/diafygi/acme-tiny in the same location as this script.
 	echo
 	echo Help:
 	echo "$ $BN DOMAIN[:DOMAIN:DOMAIN] CERTFOLDER CHALLENGEFOLDER [USERKEY]"
