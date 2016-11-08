@@ -2,13 +2,12 @@
 # --------------------------------------------------------------------
 # commitcount
 # -----------
-# For scripts that are to be made public, or not
 #
 # Author: Michael Zeltner <m@niij.org>
 #         rsa8192/5DE83E90EFFCDDF9
 # License: Public Domain
-# Date: 07 Nov 2016
-# Version: 0.1
+# Date: 08 Nov 2016
+# Version: 0.2
 # --------------------------------------------------------------------
 
 BN=$(basename $0)
@@ -21,6 +20,7 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     echo
     echo Format:
     echo YYYY-MM-DD:COMMITS:REPO
+	echo =RESULT
 	echo
 	exit 0
 fi
@@ -34,10 +34,12 @@ fi
 BASEFOLDER="$(cd $1; pwd)"
 
 if [ "$2" = "" ]; then
-	AUTHOR="--author=$email"
-else
 	AUTHOR=$2
+else
+	AUTHOR="--author=$email"
 fi
+
+COUNTALL=0
 
 function counthere {
 	for head in $(git show-ref --heads -s); do
@@ -46,6 +48,7 @@ function counthere {
 			count=$(git rev-list --count $AUTHOR --since="$daydate 00:00:00" --before="$daydate 23:59:59" $head 2>/dev/null)
 			[ $? -ne 0 ] && echo $(pwd) would not run git rev-list && exit 1
 			if [ $count -gt 0 ]; then
+				COUNTALL=$(($COUNTALL+$count))
 				echo $daydate:$count:$(pwd)
 			fi
 		done
@@ -57,3 +60,4 @@ for repo in $(find $BASEFOLDER -name "*.git" -type d | sed -e 's, ,​,g'); do
 	counthere
 	cd "$BASEFOLDER"
 done
+echo =$COUNTALL
