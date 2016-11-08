@@ -2,12 +2,14 @@
 # --------------------------------------------------------------------
 # uidshift
 # --------
+# Little helper script to move privileged lxc containers to
+# unprivileged ones
 #
 # Author: Michael Zeltner <m@niij.org>
 #         rsa8192/5DE83E90EFFCDDF9
 # License: Public Domain
-# Date: 14 Nov 2015
-# Version: 0.1
+# Date: 08 Nov 2016
+# Version: 0.2
 # --------------------------------------------------------------------
 BN=$(basename $0)
 
@@ -25,8 +27,10 @@ fi
 FOLDER=$1
 OFFSET=$2
 for n in `find . -printf '%G\n%U\n'|sort -u`; do
-    echo Changing owner for $n
-    find $FOLDER -uid $n -exec chown $(($OFFSET+n)) \{\} \;
-    echo Changing group for $n
-    find $FOLDER -gid $n -exec chgrp $(($OFFSET+n)) \{\} \;
+    if [ $n -lt $(($OFFSET-1)) ]; then
+        echo Changing owner for $n
+        find $FOLDER -uid $n -exec chown $(($OFFSET+n)) \{\} \;
+        echo Changing group for $n
+        find $FOLDER -gid $n -exec chgrp $(($OFFSET+n)) \{\} \;
+    fi
 done
