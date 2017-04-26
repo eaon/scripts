@@ -29,8 +29,10 @@ OFFSET=$2
 for n in `find . -printf '%G\n%U\n'|sort -u`; do
     if [ $n -lt $(($OFFSET-1)) ]; then
         echo Changing owner for $n
-        find $FOLDER -uid $n -exec chown $(($OFFSET+n)) \{\} \;
+        find $FOLDER -type f -uid $n -exec chown $(($OFFSET+n)) \{\} \;
+        find $FOLDER -type d -uid $n -exec chown $(($OFFSET+n)) \{\} \;
         echo Changing group for $n
-        find $FOLDER -gid $n -exec chgrp $(($OFFSET+n)) \{\} \;
+        find $FOLDER -type f -gid $n -exec chgrp $(($OFFSET+n)) \{\} \;
+        find $FOLDER -type d -gid $n -exec chgrp $(($OFFSET+n)) \{\} \;
     fi
 done
